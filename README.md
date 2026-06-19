@@ -39,7 +39,7 @@
 
 ### 下载安装包
 
-在本仓库的 Releases 页面下载 `小剪_1.1.0_x64-setup.exe` 后运行安装。
+在本仓库的 Releases 页面下载 `xiaojian_1.1.0_x64-setup.exe` 后运行安装。
 
 安装器支持：
 
