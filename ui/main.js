@@ -45,6 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshCurrentView();
   });
   window.api.onWatchChanged((state) => renderWatch(state));
+
+  // 皮肤被其它窗口(如候选面板)切换时，同步皮肤页选中态
+  if (window.XJTheme) window.XJTheme.onChange(() => { if (currentView === 'skins') renderSkins(); });
 });
 
 // ============== 事件绑定 ==============
@@ -168,11 +171,12 @@ function bindEvents() {
 function switchView(name) {
   currentView = name;
   $('side-nav').querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
-  ['history', 'favorites', 'bindings', 'settings'].forEach((v) => {
+  ['history', 'favorites', 'bindings', 'skins', 'settings'].forEach((v) => {
     $('view-' + v).classList.toggle('active', v === name);
   });
   if (name === 'favorites') loadFavorites();
   else if (name === 'bindings') loadBindings();
+  else if (name === 'skins') renderSkins();
   else if (name === 'settings') { stopRecordHotkey(); loadSettings(); loadAiConfig(); }
 }
 
@@ -182,13 +186,69 @@ function refreshCurrentView() {
   else if (currentView === 'bindings') loadBindings();
 }
 
+// ============== 皮肤(主题) ==============
+function renderSkins() {
+  const list = $('skin-list');
+  if (!list || !window.XJTheme) return;
+  const current = window.XJTheme.get();
+  list.innerHTML = '';
+  for (const skin of window.XJTheme.skins) {
+    const li = document.createElement('li');
+    li.className = 'skin-card' + (skin.id === current ? ' active' : '');
+    li.dataset.skin = skin.id;
+    li.tabIndex = 0;
+
+    // 预览块固定取该皮肤真实配色(不随当前主题变化)
+    const prev = document.createElement('div');
+    prev.className = 'skin-prev ' + skin.id;
+    prev.innerHTML =
+      '<div class="pv-side"><span class="pv-dot on"></span><span class="pv-dot"></span><span class="pv-dot"></span></div>' +
+      '<div class="pv-main"><span class="pv-line"></span><span class="pv-line s"></span><span class="pv-line"></span></div>';
+
+    const info = document.createElement('div');
+    info.className = 'skin-info';
+    const name = document.createElement('div');
+    name.className = 'skin-name';
+    name.textContent = skin.name;
+    if (skin.id === current) {
+      const tag = document.createElement('span');
+      tag.className = 'skin-current';
+      tag.textContent = '使用中';
+      name.appendChild(tag);
+    }
+    const desc = document.createElement('div');
+    desc.className = 'skin-desc';
+    desc.textContent = skin.desc;
+    info.appendChild(name);
+    info.appendChild(desc);
+
+    const check = document.createElement('div');
+    check.className = 'skin-check';
+    check.textContent = '✓';
+
+    li.appendChild(prev);
+    li.appendChild(info);
+    li.appendChild(check);
+    li.addEventListener('click', () => chooseSkin(skin));
+    li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chooseSkin(skin); } });
+    list.appendChild(li);
+  }
+}
+
+function chooseSkin(skin) {
+  if (!window.XJTheme || window.XJTheme.get() === skin.id) return;
+  window.XJTheme.set(skin.id);
+  renderSkins();
+  showToast('已切换皮肤', `当前外观：${skin.name}`);
+}
+
 // ============== 历史数据 ==============
 async function loadHistory(initial) {
   try {
     applyHistoryData(await window.api.getHistory());
     applyAndRenderHistory();
   } catch (e) {
-    if (initial) showToast('历史记录读取失败，请重启应用', true);
+    if (initial) showToast('历史读取失败', '请重启小剪后再试', { err: true });
   }
 }
 
@@ -229,7 +289,7 @@ function applyAndRenderHistory() {
 
 function historyEmptyMessage() {
   if (fullHistory.length === 0) return '暂无复制记录，复制一段文字后会显示在这里';
-  if (searchTerm) return '未找到相关记录';
+  if (searchTerm) return '没有找到相关记录，换个关键词试试';
   if (typeFilter === 'image') return '暂无图片记录，复制一张图片后会显示在这里';
   if (typeFilter === 'text') return '暂无文本记录';
   return '暂无复制记录';
@@ -254,7 +314,7 @@ function renderFavorites() {
     $('fav-normal-section').hidden = true;
     empty.hidden = false;
     empty.querySelector('p').textContent =
-      totalRaw === 0 ? '暂无收藏记录，点击星标可收藏重要内容' : '未找到相关收藏记录';
+      totalRaw === 0 ? '暂无收藏记录，点击星标可收藏重要内容' : '没有找到相关收藏，换个关键词试试';
     return;
   }
   empty.hidden = true;
@@ -374,30 +434,32 @@ async function doCopy(id, btn) {
       btn.classList.add('done');
       setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1200);
     }
-    showToast('已复制到剪贴板');
+    showToast('已复制', '内容已回到剪贴板');
   } else if (res.reason === 'not_found') {
-    showToast('记录不存在，列表已刷新', true);
+    showToast('记录不存在', '列表已自动刷新', { err: true });
   } else {
-    showToast('复制失败，请重新尝试', true);
+    showToast('复制失败', '请重新尝试', { err: true });
   }
 }
 
 async function doDelete(id) {
-  await window.api.deleteRecord(id);
+  const res = await window.api.deleteRecord(id);
+  if (res && res.ok === false) showToast('删除失败', '请稍后重试', { err: true });
+  else showToast('已删除', '这条历史记录已移除');
 }
 
 async function doToggleFavorite(id) {
   const res = await window.api.toggleFavorite(id);
-  if (res && res.ok) showToast(res.is_favorite ? '已收藏' : '已取消收藏');
-  else if (res && res.reason === 'not_found') showToast('记录不存在，列表已刷新', true);
-  else showToast('收藏操作失败，请重试', true);
+  if (res && res.ok) showToast(res.is_favorite ? '已收藏' : '已取消收藏', res.is_favorite ? '收藏记录不会被自动清除' : '这条记录会回到普通历史');
+  else if (res && res.reason === 'not_found') showToast('记录不存在', '列表已自动刷新', { err: true });
+  else showToast('收藏失败', '请稍后重试', { err: true });
 }
 
 async function doTogglePin(id) {
   const res = await window.api.togglePin(id);
-  if (res && res.ok) showToast(res.is_pinned ? '已置顶' : '已取消置顶');
-  else if (res && res.reason === 'not_favorite') showToast('请先收藏后再置顶', true);
-  else showToast('置顶操作失败，请重试', true);
+  if (res && res.ok) showToast(res.is_pinned ? '已置顶' : '已取消置顶', res.is_pinned ? '这条收藏会显示在最前面' : '已恢复到普通收藏顺序');
+  else if (res && res.reason === 'not_favorite') showToast('无法置顶', '请先收藏这条记录', { err: true });
+  else showToast('置顶失败', '请稍后重试', { err: true });
 }
 
 // ============== 快捷绑定页 ==============
@@ -452,7 +514,7 @@ function renderBindings() {
 
 async function doUnbind(key) {
   await window.api.unbind(key);
-  showToast(`已解绑 Ctrl + ${key}`);
+  showToast(`已解绑 Ctrl + ${key}`, '该快捷键已恢复空闲');
 }
 
 // ============== 选择记录弹窗（绑定页「更换/绑定」） ==============
@@ -510,11 +572,12 @@ function renderPickerList(term) {
 
 async function confirmPicker() {
   if (!pickerForKey || !pickerSelectedId) return;
+  const key = pickerForKey;
   const res = await window.api.setBinding(pickerForKey, pickerSelectedId);
   closePicker();
-  if (res && res.ok) showToast('绑定已保存');
-  else if (res && res.reason === 'record_not_found') showToast('记录不存在，请重新选择', true);
-  else showToast('绑定失败，请重试', true);
+  if (res && res.ok) showToast(`已绑定 Ctrl + ${key}`, '按下快捷键即可复制这条内容');
+  else if (res && res.reason === 'record_not_found') showToast('记录不存在', '请重新选择', { err: true });
+  else showToast('绑定失败', '请稍后重试', { err: true });
 }
 
 function closePicker() {
@@ -551,9 +614,9 @@ async function chooseHotkey(key) {
   if (!hkpickerRecordId) return;
   const res = await window.api.setBinding(key, hkpickerRecordId);
   closeHkpicker();
-  if (res && res.ok) showToast(`已绑定到 Ctrl + ${key}`);
-  else if (res && res.reason === 'record_not_found') showToast('记录不存在，无法绑定', true);
-  else showToast('绑定失败，请重试', true);
+  if (res && res.ok) showToast(`已绑定 Ctrl + ${key}`, '按下快捷键即可复制这条内容');
+  else if (res && res.reason === 'record_not_found') showToast('记录不存在', '无法绑定，请重试', { err: true });
+  else showToast('绑定失败', '请稍后重试', { err: true });
 }
 
 function closeHkpicker() {
@@ -570,7 +633,10 @@ function renderWatch(watching) {
 }
 
 async function toggleWatch() {
-  renderWatch(await window.api.toggleWatch());
+  const watching = await window.api.toggleWatch();
+  renderWatch(watching);
+  if (watching) showToast('正在监听', '复制文本或图片会自动记录');
+  else showToast('已暂停监听', '新的复制内容不会被记录');
 }
 
 // ============== 设置 ==============
@@ -617,6 +683,7 @@ async function saveSettings() {
     $('chk-launch').checked = !!form.launch_at_login;
     $('chk-tray').checked = form.minimize_to_tray !== false;
     setSaveFeedback('设置已保存', 'ok');
+    showToast('设置已保存', '更改已立即生效');
     setTimeout(clearSaveFeedback, 1500);
   } else if (res.reason === 'invalid_max_records') {
     setSaveFeedback('请选择有效的历史保留数量', 'err');
@@ -816,8 +883,8 @@ function closeTranslate() {
 async function copyTranslation() {
   if (!lastTranslation) return;
   const res = await window.api.copyText(lastTranslation);
-  if (res && res.ok) showToast('已复制译文');
-  else showToast('复制失败，请重试', true);
+  if (res && res.ok) showToast('已复制译文', '译文已回到剪贴板');
+  else showToast('复制失败', '请稍后重试', { err: true });
 }
 
 // ============== 清空 ==============
@@ -828,8 +895,8 @@ function openClearModal() {
 async function confirmClear() {
   const res = await window.api.clearHistory();
   $('clear-modal').hidden = true;
-  if (res.ok) showToast('已清空普通历史，收藏记录已保留');
-  else showToast('清空失败，请重试', true);
+  if (res.ok) showToast('已清空普通历史', '收藏记录和快捷绑定已保留');
+  else showToast('清空失败', '请稍后重试', { err: true });
 }
 
 function openClearFavModal() {
@@ -839,19 +906,31 @@ function openClearFavModal() {
 async function confirmClearFav() {
   const res = await window.api.clearFavorites();
   $('clear-fav-modal').hidden = true;
-  if (res.ok) showToast('已清空全部收藏');
-  else showToast('清空失败，请重试', true);
+  if (res.ok) showToast('已清空全部收藏', '收藏、置顶与快捷绑定已移除');
+  else showToast('清空失败', '请稍后重试', { err: true });
 }
 
 // ============== 工具 ==============
 let toastTimer = null;
-function showToast(text, isErr) {
+// showToast(title, desc, opts) —— 标题 + 说明 双行提示；opts.err = true 为错误态
+function showToast(title, desc, opts) {
   const t = $('toast');
-  t.textContent = text;
-  t.className = 'toast' + (isErr ? ' err' : '');
+  const err = opts && opts.err;
+  t.innerHTML = '';
+  const titleEl = document.createElement('span');
+  titleEl.className = 'toast-title';
+  titleEl.textContent = title;
+  t.appendChild(titleEl);
+  if (desc) {
+    const descEl = document.createElement('span');
+    descEl.className = 'toast-desc';
+    descEl.textContent = desc;
+    t.appendChild(descEl);
+  }
+  t.className = 'toast' + (err ? ' err' : '');
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
 }
 
 function formatSize(b) {

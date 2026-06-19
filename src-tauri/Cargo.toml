@@ -1,6 +1,6 @@
 [package]
 name = "xiaojian"
-version = "1.0.0"
+version = "1.1.0"
 description = "小剪 — 本地剪贴板增强工具"
 authors = ["王涵"]
 edition = "2021"

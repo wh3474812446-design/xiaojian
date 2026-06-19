@@ -1,6 +1,6 @@
 {
   "name": "xiaojian",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "小剪 — 本地剪贴板增强工具，自动保存复制历史，快捷键唤起候选面板快速粘贴（Tauri 2 轻量实现）",
   "author": "王涵",
   "license": "MIT",

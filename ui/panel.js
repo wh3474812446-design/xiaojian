@@ -15,6 +15,8 @@ const searchEl = document.getElementById('panel-search');
 
 // 收到主进程推送的候选数据（每次唤起都会发）
 window.panelApi.onData((data) => {
+  // 每次唤起时同步皮肤(隐藏窗口可能收不到 storage 事件，故主动对齐)
+  if (window.XJTheme) window.XJTheme.apply(window.XJTheme.get());
   recent = (data && data.recent) || [];
   favorites = (data && data.favorites) || [];
   results = null;
