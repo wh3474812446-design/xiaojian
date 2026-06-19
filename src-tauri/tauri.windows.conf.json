@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "startMenuFolder": "小剪",
+        "installerHooks": "nsis-hooks.nsh"
+      }
+    }
+  }
+}

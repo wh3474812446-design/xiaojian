@@ -1,0 +1,42 @@
+[package]
+name = "xiaojian"
+version = "1.0.0"
+description = "小剪 — 本地剪贴板增强工具"
+authors = ["王涵"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.2", features = ["tray-icon"] }
+tauri-plugin-log = "2"
+uuid = { version = "1", features = ["v4"] }
+sha1_smol = "1"
+tauri-plugin-clipboard = "2.1.11"
+image = { version = "0.25.6", default-features = false, features = ["png", "jpeg"] }
+base64 = "0.22.1"
+tauri-plugin-global-shortcut = "2.3.2"
+enigo = "0.6.1"
+tauri-plugin-autostart = "2.5.1"
+tauri-plugin-single-instance = "2.4.2"
+windows-dpapi = "0.2.0"
+reqwest = { version = "0.13", features = ["json"] }
+window-vibrancy = "0.7.1"
+
+# 体积优先(目标 <10MB)
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+incremental = false

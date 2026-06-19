@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# Tauri / Rust 构建产物（自动生成，可重建）
+/src-tauri/target/
+/src-tauri/gen/

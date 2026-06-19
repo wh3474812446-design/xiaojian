@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>粘贴历史</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">
+        <svg viewBox="0 0 32 32" width="17" height="17" fill="none"><defs><linearGradient id="xjp" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse"><stop stop-color="#6AA0FF"/><stop offset="1" stop-color="#3D5AFE"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="8.5" fill="url(#xjp)"/><rect x="9.4" y="8.2" width="13.2" height="16.4" rx="3.2" fill="#fff" fill-opacity=".97"/><rect x="12.8" y="5.9" width="6.4" height="4.3" rx="1.8" fill="#fff"/><rect x="13.9" y="6.9" width="4.2" height="2.3" rx="1.15" fill="#3D5AFE"/><rect x="11.9" y="13.3" width="8.2" height="1.7" rx=".85" fill="#5B86FF"/><rect x="11.9" y="16.8" width="8.2" height="1.7" rx=".85" fill="#AFC4FF"/><rect x="11.9" y="20.3" width="5" height="1.7" rx=".85" fill="#AFC4FF"/></svg>
+        粘贴历史
+      </span>
+      <span class="panel-hint">↑↓ 选择 · Enter 粘贴 · Esc 关闭</span>
+    </div>
+    <div class="panel-search">
+      <svg class="panel-search-icon" viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
+      <input id="panel-search" type="text" placeholder="搜索记录…" autocomplete="off" spellcheck="false" />
+    </div>
+    <div id="panel-body" class="panel-body"></div>
+    <div id="panel-empty" class="panel-empty" hidden>暂无可复制记录</div>
+    <div id="panel-toast" class="panel-toast" hidden></div>
+  </div>
+  <script src="shim.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>
